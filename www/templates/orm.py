@@ -36,7 +36,7 @@ async def create_pool(loop, **kw):#这里的**kw是一个dict
 		user=kw['user'],
 		password=kw['password'],
 		db=kw['db'],
-		charset=kw.get('charset', 'utf-8'),
+		charset=kw.get('charset', 'utf8'),
 		autocommit=kw.get('autocommit', True),#默认自动提交事务，不用手动去提交事务
 		maxsize=kw.get('maxsize', 10),# 默认最大连接数为10
 		minsize=kw.get('minsize', 1),
@@ -307,34 +307,3 @@ class Model(dict, metaclass=ModelMetaclass):
 		rows = await execute(self.__delete__, args)
 		if rows != 1:
 			logging.warn('failed to remove by primary key: affected rows: %s' % rows)
-
-#一个类自带前后都有双下划线的方法，在子类继承该类的时候，
-# 这些方法会自动调用，比如__init__  
-if __name__ == '__main__':
-    # 虽然User类乍看没有参数传入，但实际上，User类继承Model类，
-    # Model类又继承dict类，所以User类的实例可以传入关键字参数  
-	class User(Model):
-		# 定义类的属性到列的映射：
-		id = IntegerField('id',primary_key=True)#主键为id， tablename为User，即类名  
-		name = StringField('username')
-		email = StringField('email')
-		password = StringField('password')
-	#创建异步事件的句柄
-	loop = asyncio.get_event_loop()
-	#创建实例
-	async def test():
-		await create_pool(loop=loop,host='localhost', port=3306, user='root', password='1324', db='test')
-		user = User(id=8, name='sly', email='slysly759@gmail.com', password='fuckblog')
-		await user.save()
-		r = await User.find('11')
-		print(r)
-		r = await User.findAll()
-		print(1, r)
-		r = await User.findAll(id='12')
-		print(2, r)
-		await destroy_pool()
- 
-	loop.run_until_complete(test())
-	loop.close()
-	if loop.is_closed():
-		sys.exit(0)
