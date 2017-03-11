@@ -60,6 +60,7 @@ async def data_factory(app, handler):
 async def response_factory(app, handle):
 	async def reponse(request):
 		logging.info('Response handler...')
+		#获取handle的返回值，根据返回值的不同类型进行处理
 		r = await handle(request)
 		if isinstance(r, web.StreamReponse):
 			return r
@@ -113,6 +114,9 @@ def datetime_filter(t):
 
 async def init(loop):
 	await orm.create_pool(loop=loop, host='127.0.0.1', port=3306, user='root', password='1234', db='awesome')
+	# 调用框架，使用web.Application类创建aiohttp server——app，
+	#其中loop为Eventloop用来处理HTTP请求，middlewares为中间件，
+	#在这里用来记录日志并处理handler返回的数据为web.response对象，
 	app = web.Application(loop=loop, middlewares=[
 		logger_factory, response_factory
 		])

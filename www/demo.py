@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+__author__ = 'Zheng Wantong'
 """
 code is far away from bugs with the god animal protecting
 			 ┏┓      ┏┓
