@@ -8,6 +8,7 @@ __author__ = 'Zheng Wantong'
 async web application.
 '''
 import logging; logging.basicConfig(level=logging.INFO)
+
 import asyncio, os, json, time
 from datetime import datetime
 
@@ -38,7 +39,7 @@ def init_jinja2(app, **kw):
 			env.filters[name] = f
 	app['__templating__'] = env
 
-async def logger_factory(app, handle):
+async def logger_factory(app, handler):
 	async def logger(request):
 		logging.info('Request: %s %s' % (request.method, request.path))
 		# await asyncio.sleep(0.3)
@@ -57,12 +58,11 @@ async def data_factory(app, handler):
 		return (await handle(request))
 	return parse_data
 
-async def response_factory(app, handle):
-	async def reponse(request):
+async def response_factory(app, handler):
+	async def response(request):
 		logging.info('Response handler...')
-		#获取handle的返回值，根据返回值的不同类型进行处理
-		r = await handle(request)
-		if isinstance(r, web.StreamReponse):
+		r = await handler(request)
+		if isinstance(r, web.StreamResponse):
 			return r
 		if isinstance(r, bytes):
 			resp = web.Response(body=r)
@@ -71,21 +71,21 @@ async def response_factory(app, handle):
 		if isinstance(r, str):
 			if r.startswith('redirect:'):
 				return web.HTTPFound(r[9:])
-			resp = web.Response(body=r.endode('utf-8'))
-			resp.content_type = 'texr/html;charset=utf-8'
+			resp = web.Response(body=r.encode('utf-8'))
+			resp.content_type = 'text/html;charset=utf-8'
 			return resp
 		if isinstance(r, dict):
-			template = r.get('__templating__')
+			template = r.get('__template__')
 			if template is None:
-				resp = web.Response(body=json.dump(r, ensure_ascii=False, default=lambda o: o.__dict__).encode('utf-8'))
+				resp = web.Response(body=json.dumps(r, ensure_ascii=False, default=lambda o: o.__dict__).encode('utf-8'))
 				resp.content_type = 'application/json;charset=utf-8'
 				return resp
 			else:
 				resp = web.Response(body=app['__templating__'].get_template(template).render(**r).encode('utf-8'))
 				resp.content_type = 'text/html;charset=utf-8'
 				return resp
-		if isinstance(r, int) and r >= 100 and r < 600:
-			return web.Response(r)
+		if isinstance(r, int) and t >= 100 and t < 600:
+			return web.Response(t)
 		if isinstance(r, tuple) and len(r) == 2:
 			t, m = r
 			if isinstance(t, int) and t >= 100 and t < 600:
@@ -108,9 +108,6 @@ def datetime_filter(t):
 		return u'%s天前' % (delta // 86400)
 	dt = datetime.fromtimestamp(t)
 	return u'%s年%s月%s日' % (dt.year, dt.month, dt.day)
-
-# def index(request):
-# 	return web.Response(body=b"<h1>Awesome</h1>", content_type='text/html', charset='UTF-8')
 
 async def init(loop):
 	await orm.create_pool(loop=loop, host='127.0.0.1', port=3306, user='root', password='1234', db='awesome')
