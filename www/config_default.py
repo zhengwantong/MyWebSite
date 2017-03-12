@@ -10,10 +10,11 @@ __author__ = 'Zheng Wantong'
 configs = {
 	'db': {
 		'host': '127.0.0.1',
+		#'host': '10.134.126.60',
 		'port': 3306,
 		'user': 'www-data',
 		'password': 'www-data',
-		'database': 'awesome'
+		'db': 'awesome'
 	},
 	'session': {
 		'secret': 'AwEsOmE'

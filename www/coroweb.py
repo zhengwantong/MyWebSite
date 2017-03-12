@@ -4,8 +4,11 @@
 __author__ = 'Zheng Wantong'
 
 import asyncio, os, inspect, logging, functools
+
 from urllib import parse
+
 from aiohttp import web
+
 from apis import APIError
 
 def get(path):
@@ -77,6 +80,7 @@ def has_request_arg(fn):
 # RequestHandler类主要是对handler进行封装，获
 # 取request中传入的参数并传入handler中
 class RequestHandler(object):
+
     def __init__(self, app, fn):
         self._app = app
         self._func = fn
@@ -84,10 +88,11 @@ class RequestHandler(object):
         self._has_var_kw_arg = has_var_kw_arg(fn)# 是否有变长字典参数
         self._has_named_kw_args = has_named_kw_args(fn)# 是否存在关键字参数
         self._named_kw_args = get_named_kw_args(fn)# 所有关键字参数
-        self._required_kw_args = get_required_kw_args(fn)# 所有没有默认值的关键字参数
+        self._required_kw_args = get_required_kw_args(fn)# 所有没有默
 
     #call魔术方法，可以像调用函数一样调用其实例
-    async def __call__(self, request):
+    @asyncio.coroutine
+    def __call__(self, request):
         kw = None
         if self._has_var_kw_arg or self._has_named_kw_args or self._required_kw_args:
             if request.method == 'POST':
@@ -95,12 +100,12 @@ class RequestHandler(object):
                     return web.HTTPBadRequest('Missing Content-Type.')
                 ct = request.content_type.lower()
                 if ct.startswith('application/json'):
-                    params = await request.json()
+                    params = yield from request.json()
                     if not isinstance(params, dict):
                         return web.HTTPBadRequest('JSON body must be object.')
                     kw = params
                 elif ct.startswith('application/x-www-form-urlencoded') or ct.startswith('multipart/form-data'):
-                    params = await request.post()
+                    params = yield from request.post()
                     kw = dict(**params)
                 else:
                     return web.HTTPBadRequest('Unsupported Content-Type: %s' % request.content_type)
@@ -114,7 +119,7 @@ class RequestHandler(object):
         if kw is None:
             kw = dict(**request.match_info)
         else:
-            # 如果没有变长字典参数且有关键字参数，
+            #  如果没有变长字典参数且有关键字参数，
             # 把所有关键字参数提取出来，忽略所有变长字典参数
             if not self._has_var_kw_arg and self._named_kw_args:
                 # remove all unamed kw:
@@ -138,7 +143,7 @@ class RequestHandler(object):
                     return web.HTTPBadRequest('Missing argument: %s' % name)
         logging.info('call with args: %s' % str(kw))
         try:
-            r = await self._func(**kw)
+            r = yield from self._func(**kw)
             return r
         except APIError as e:
             return dict(error=e.error, data=e.data, message=e.message)
@@ -163,20 +168,20 @@ def add_route(app, fn):
 
 def add_routes(app, module_name):
     #找到'.'则返回其所在位置，否则返回-1
-	n = module_name.rfind('.')
-	if n == (-1):
+    n = module_name.rfind('.')
+    if n == (-1):
         #mod为包含module_name模块中全部属性和方法的list
-		mod = __import__(module_name, globals(), locals())
-	else:
-		name = module_name[n+1:]
-		mod = getattr(__import__(module_name[:n], globals(), locals(), [name]), name)
-	for attr in dir(mod):
+        mod = __import__(module_name, globals(), locals())
+    else:
+        name = module_name[n+1:]
+        mod = getattr(__import__(module_name[:n], globals(), locals(), [name]), name)
+    for attr in dir(mod):
         #检查handler是否被@get或@post装饰
-		if attr.startswith('_'):
-			continue
-		fn = getattr(mod, attr)
-		if callable(fn):
-			method = getattr(fn, '__method__', None)
-			path = getattr(fn, '__route__', None)
-			if method and path:
-				add_route(app, fn)
+        if attr.startswith('_'):
+            continue
+        fn = getattr(mod, attr)
+        if callable(fn):
+            method = getattr(fn, '__method__', None)
+            path = getattr(fn, '__route__', None)
+            if method and path:
+                add_route(app, fn)
